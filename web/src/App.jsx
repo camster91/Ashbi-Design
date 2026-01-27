@@ -10,6 +10,8 @@ import Clients from './pages/Clients';
 import Client from './pages/Client';
 import Team from './pages/Team';
 import Analytics from './pages/Analytics';
+import Search from './pages/Search';
+import PendingApprovals from './pages/PendingApprovals';
 
 function PrivateRoute({ children }) {
   const { user, isLoading } = useAuth();
@@ -44,6 +46,8 @@ function AppRoutes() {
                 <Route path="/client/:id" element={<Client />} />
                 <Route path="/team" element={<Team />} />
                 <Route path="/analytics" element={<Analytics />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/approvals" element={<PendingApprovals />} />
               </Routes>
             </Layout>
           </PrivateRoute>

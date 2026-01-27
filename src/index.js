@@ -25,6 +25,8 @@ import taskRoutes from './routes/task.routes.js';
 import searchRoutes from './routes/search.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import settingsRoutes from './routes/settings.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -91,6 +93,8 @@ await fastify.register(taskRoutes, { prefix: '/api/tasks' });
 await fastify.register(searchRoutes, { prefix: '/api/search' });
 await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
 await fastify.register(aiRoutes, { prefix: '/api/ai' });
+await fastify.register(notificationRoutes, { prefix: '/api/notifications' });
+await fastify.register(settingsRoutes, { prefix: '/api/settings' });
 
 // Serve static frontend in production
 if (!env.isDev) {

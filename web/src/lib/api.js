@@ -178,6 +178,32 @@ export const api = {
     request(`/notifications/read/${id}`, { method: 'POST' }),
   markAllNotificationsRead: () =>
     request('/notifications/read-all', { method: 'POST' }),
+
+  // Settings - Assignment Rules
+  getAssignmentRules: () =>
+    request('/settings/assignment-rules'),
+  createAssignmentRule: (data) =>
+    request('/settings/assignment-rules', { method: 'POST', body: data }),
+  updateAssignmentRule: (id, data) =>
+    request(`/settings/assignment-rules/${id}`, { method: 'PUT', body: data }),
+  deleteAssignmentRule: (id) =>
+    request(`/settings/assignment-rules/${id}`, { method: 'DELETE' }),
+
+  // Settings - Templates
+  getTemplates: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/settings/templates${query ? `?${query}` : ''}`);
+  },
+  getTemplate: (id) =>
+    request(`/settings/templates/${id}`),
+  createTemplate: (data) =>
+    request('/settings/templates', { method: 'POST', body: data }),
+  updateTemplate: (id, data) =>
+    request(`/settings/templates/${id}`, { method: 'PUT', body: data }),
+  deleteTemplate: (id) =>
+    request(`/settings/templates/${id}`, { method: 'DELETE' }),
+  renderTemplate: (id, variables) =>
+    request(`/settings/templates/${id}/render`, { method: 'POST', body: { variables } }),
 };
 
 export default api;

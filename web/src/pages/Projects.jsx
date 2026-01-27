@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { FolderOpen, Users, MessageSquare, ChevronRight } from 'lucide-react';
+import { FolderOpen, Users, MessageSquare, ChevronRight, Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import { getHealthColor, cn } from '../lib/utils';
+import CreateProjectModal from '../components/CreateProjectModal';
 
 export default function Projects() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: () => api.getProjects(),
@@ -22,10 +26,19 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Projects</h1>
-        <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
           New Project
         </button>
       </div>
+
+      <CreateProjectModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {projects?.map((project) => (

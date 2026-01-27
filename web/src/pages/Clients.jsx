@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { Building, FolderOpen, MessageSquare, Users, ChevronRight } from 'lucide-react';
+import { Building, FolderOpen, MessageSquare, Users, ChevronRight, Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
+import CreateClientModal from '../components/CreateClientModal';
 
 export default function Clients() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: () => api.getClients(),
@@ -22,10 +26,19 @@ export default function Clients() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Clients</h1>
-        <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
           Add Client
         </button>
       </div>
+
+      <CreateClientModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
 
       <div className="bg-white rounded-lg shadow">
         <table className="w-full">

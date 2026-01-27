@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { User, MessageSquare, CheckSquare } from 'lucide-react';
+import { User, MessageSquare, CheckSquare, Plus } from 'lucide-react';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
+import CreateTeamMemberModal from '../components/CreateTeamMemberModal';
 
 export default function Team() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   const { data: team, isLoading } = useQuery({
     queryKey: ['team'],
     queryFn: () => api.getTeam(),
@@ -26,10 +30,19 @@ export default function Team() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Team</h1>
-        <button className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
           Add Member
         </button>
       </div>
+
+      <CreateTeamMemberModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+      />
 
       {/* Workload Overview */}
       {workload && workload.length > 0 && (
