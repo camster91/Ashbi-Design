@@ -1,0 +1,48 @@
+{
+  "name": "agency-hub",
+  "version": "1.0.0",
+  "description": "AI-powered client request management system for agencies",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "dev:worker": "node --watch src/jobs/worker.js",
+    "start": "node src/index.js",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd web && npm run build",
+    "build:all": "npm run build:frontend && npx prisma generate",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "node --test",
+    "test:watch": "node --test --watch",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@fastify/cookie": "^10.0.1",
+    "@fastify/cors": "^10.0.1",
+    "@fastify/jwt": "^9.0.1",
+    "@fastify/static": "^8.0.1",
+    "@fastify/websocket": "^11.0.1",
+    "@prisma/client": "^5.22.0",
+    "bullmq": "^5.25.0",
+    "fastify": "^5.1.0",
+    "ioredis": "^5.4.1",
+    "mailparser": "^3.7.1",
+    "socket.io": "^4.8.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "eslint": "^9.15.0",
+    "prisma": "^5.22.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
