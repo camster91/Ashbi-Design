@@ -1,0 +1,290 @@
+// Agency Hub Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==================== USERS & AUTH ====================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("TEAM") // ADMIN or TEAM
+  skills    String   @default("[]") // JSON array of skills
+  capacity  Int      @default(100) // Percentage available
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  assignedThreads  Thread[]        @relation("AssignedTo")
+  assignedTasks    Task[]          @relation("TaskAssignee")
+  draftedResponses Response[]      @relation("DraftedBy")
+  approvedResponses Response[]     @relation("ApprovedBy")
+  notifications    Notification[]
+  internalNotes    InternalNote[]
+
+  @@map("users")
+}
+
+// ==================== CLIENTS ====================
+
+model Client {
+  id                  String    @id @default(cuid())
+  name                String
+  domain              String?   @unique
+  status              String    @default("ACTIVE") // ACTIVE, PAUSED, CHURNED
+  communicationPrefs  String    @default("{}") // JSON: tone, frequency, etc.
+  satisfactionSignals String    @default("{}") // JSON: sentiment trends
+  slaOverrides        String?   // JSON: custom SLA rules
+  knowledgeBase       String    @default("[]") // JSON: brand guidelines, specs, etc.
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  contacts Contact[]
+  projects Project[]
+  threads  Thread[]
+
+  @@map("clients")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  email     String
+  name      String
+  role      String?
+  isPrimary Boolean  @default(false)
+  clientId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([email, clientId])
+  @@map("contacts")
+}
+
+// ==================== PROJECTS ====================
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  status         String   @default("ACTIVE") // ACTIVE, ON_HOLD, COMPLETED, CANCELLED
+  health         String   @default("ON_TRACK") // ON_TRACK, NEEDS_ATTENTION, AT_RISK
+  healthScore    Int      @default(100)
+  aiSummary      String?  // AI-generated current status summary
+  aiPlan         String?  // JSON: AI-generated task plan
+  risks          String   @default("[]") // JSON: identified risks
+  defaultOwnerId String?
+  clientId       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  threads Thread[]
+  tasks   Task[]
+
+  @@map("projects")
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  title          String
+  description    String?
+  status         String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, BLOCKED
+  priority       String    @default("NORMAL") // CRITICAL, HIGH, NORMAL, LOW
+  category       String    @default("UPCOMING") // IMMEDIATE, THIS_WEEK, UPCOMING, WAITING_CLIENT, WAITING_US
+  estimatedTime  String?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  sourceThreadId String?
+  blockedBy      String?
+  aiGenerated    Boolean   @default(false)
+  projectId      String
+  assigneeId     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  @@map("tasks")
+}
+
+// ==================== THREADS & MESSAGES ====================
+
+model Thread {
+  id                 String    @id @default(cuid())
+  subject            String
+  status             String    @default("OPEN") // OPEN, AWAITING_RESPONSE, RESOLVED, SNOOZED
+  priority           String    @default("NORMAL") // CRITICAL, HIGH, NORMAL, LOW
+  intent             String?   // AI-classified intent
+  sentiment          String?   // AI-detected sentiment
+  urgencyReason      String?
+  lastActivityAt     DateTime  @default(now())
+  snoozedUntil       DateTime?
+  slaDeadline        DateTime?
+  slaBreached        Boolean   @default(false)
+  aiAnalysis         String?   // JSON: full AI analysis result
+  matchConfidence    Float     @default(0)
+  matchReason        String?
+  needsTriage        Boolean   @default(false)
+  clientId           String?
+  projectId          String?
+  assignedToId       String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  client        Client?        @relation(fields: [clientId], references: [id])
+  project       Project?       @relation(fields: [projectId], references: [id])
+  assignedTo    User?          @relation("AssignedTo", fields: [assignedToId], references: [id])
+  messages      Message[]
+  responses     Response[]
+  internalNotes InternalNote[]
+
+  @@map("threads")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  direction      String   // INBOUND or OUTBOUND
+  senderEmail    String
+  senderName     String?
+  subject        String?
+  bodyText       String
+  bodyHtml       String?
+  rawEmail       String?  // Original email content preserved
+  headers        String?  // JSON: email headers
+  receivedAt     DateTime @default(now())
+  processedAt    DateTime?
+  aiExtracted    String?  // JSON: AI-extracted data
+  threadId       String
+  createdAt      DateTime @default(now())
+
+  // Relations
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+}
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  content   String
+  threadId  String
+  authorId  String
+  createdAt DateTime @default(now())
+
+  // Relations
+  thread Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id])
+
+  @@map("internal_notes")
+}
+
+// ==================== RESPONSES & APPROVAL ====================
+
+model Response {
+  id               String    @id @default(cuid())
+  status           String    @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, SENT
+  subject          String
+  body             String
+  tone             String?
+  aiGenerated      Boolean   @default(false)
+  aiOptions        String?   // JSON: alternative AI drafts
+  rejectionReason  String?
+  approvedAt       DateTime?
+  sentAt           DateTime?
+  threadId         String
+  draftedById      String
+  approvedById     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // Relations
+  thread     Thread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  draftedBy  User   @relation("DraftedBy", fields: [draftedById], references: [id])
+  approvedBy User?  @relation("ApprovedBy", fields: [approvedById], references: [id])
+
+  @@map("responses")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id        String    @id @default(cuid())
+  type      String    // THREAD_ASSIGNED, RESPONSE_APPROVED, ESCALATION, etc.
+  title     String
+  message   String
+  data      String?   // JSON: additional context
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  userId    String
+  createdAt DateTime  @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ==================== CONFIGURATION ====================
+
+model AssignmentRule {
+  id         String   @id @default(cuid())
+  name       String
+  type       String   // SKILL, CLIENT, PROJECT, LOAD_BALANCE
+  conditions String   // JSON: rule conditions
+  assignToId String?
+  priority   Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("assignment_rules")
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   // GREETING, ACKNOWLEDGMENT, FOLLOW_UP, etc.
+  subject   String?
+  body      String
+  variables String   @default("[]") // JSON: available variables
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("templates")
+}
+
+// ==================== UNMATCHED QUEUE ====================
+
+model UnmatchedEmail {
+  id               String   @id @default(cuid())
+  senderEmail      String
+  senderName       String?
+  subject          String
+  bodyText         String
+  bodyHtml         String?
+  rawEmail         String?
+  suggestedClients String?  // JSON: AI suggestions
+  suggestedProjects String? // JSON: AI suggestions
+  status           String   @default("PENDING") // PENDING, RESOLVED, IGNORED
+  resolvedAt       DateTime?
+  createdAt        DateTime @default(now())
+
+  @@map("unmatched_emails")
+}
