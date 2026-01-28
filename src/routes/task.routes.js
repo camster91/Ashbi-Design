@@ -7,7 +7,10 @@ export default async function taskRoutes(fastify) {
   fastify.get('/', {
     onRequest: [fastify.authenticate]
   }, async (request) => {
-    const { status, priority, category, projectId, assigneeId, page = 1, limit = 50 } = request.query;
+    const { status, priority, category, projectId, assigneeId, page: pageParam = '1', limit: limitParam = '50' } = request.query;
+
+    const page = parseInt(pageParam);
+    const limit = parseInt(limitParam);
 
     const where = {};
     if (status) where.status = status;
