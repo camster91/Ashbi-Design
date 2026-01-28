@@ -15,9 +15,12 @@ export default async function threadRoutes(fastify) {
       clientId,
       projectId,
       assignedToId,
-      page = 1,
-      limit = 20
+      page: pageParam = '1',
+      limit: limitParam = '20'
     } = request.query;
+
+    const page = parseInt(pageParam);
+    const limit = parseInt(limitParam);
 
     const where = {};
     if (status) where.status = status;

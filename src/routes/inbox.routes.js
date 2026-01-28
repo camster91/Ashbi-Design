@@ -13,9 +13,12 @@ export default async function inboxRoutes(fastify) {
       clientId,
       assignedToId,
       needsTriage,
-      page = 1,
-      limit = 20
+      page: pageParam = '1',
+      limit: limitParam = '20'
     } = request.query;
+
+    const page = parseInt(pageParam);
+    const limit = parseInt(limitParam);
 
     const where = {};
 

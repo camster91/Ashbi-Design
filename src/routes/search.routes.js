@@ -7,7 +7,8 @@ export default async function searchRoutes(fastify) {
   fastify.get('/', {
     onRequest: [fastify.authenticate]
   }, async (request) => {
-    const { q, type, clientId, projectId, limit = 20 } = request.query;
+    const { q, type, clientId, projectId, limit: limitParam = '20' } = request.query;
+    const limit = parseInt(limitParam);
 
     if (!q || q.length < 2) {
       return { results: [], query: q };
@@ -116,7 +117,8 @@ export default async function searchRoutes(fastify) {
     onRequest: [fastify.authenticate]
   }, async (request, reply) => {
     const { threadId } = request.params;
-    const { limit = 5 } = request.query;
+    const { limit: limitParam = '5' } = request.query;
+    const limit = parseInt(limitParam);
 
     const thread = await prisma.thread.findUnique({
       where: { id: threadId },
@@ -152,7 +154,7 @@ export default async function searchRoutes(fastify) {
         project: { select: { id: true, name: true } }
       },
       orderBy: { lastActivityAt: 'desc' },
-      take: parseInt(limit)
+      take: limit
     });
 
     return {
