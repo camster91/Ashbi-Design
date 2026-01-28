@@ -5,6 +5,7 @@ import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import jwt from '@fastify/jwt';
 import fastifyStatic from '@fastify/static';
+import multipart from '@fastify/multipart';
 import { Server as SocketIO } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
@@ -27,6 +28,15 @@ import analyticsRoutes from './routes/analytics.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
+// New feature routes
+import chatRoutes from './routes/chat.routes.js';
+import noteRoutes from './routes/note.routes.js';
+import milestoneRoutes from './routes/milestone.routes.js';
+import timeRoutes from './routes/time.routes.js';
+import attachmentRoutes from './routes/attachment.routes.js';
+import activityRoutes from './routes/activity.routes.js';
+import commentRoutes from './routes/comment.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +57,12 @@ await fastify.register(cors, {
 });
 
 await fastify.register(cookie);
+
+await fastify.register(multipart, {
+  limits: {
+    fileSize: 50 * 1024 * 1024 // 50MB max file size
+  }
+});
 
 await fastify.register(jwt, {
   secret: env.jwtSecret,
@@ -95,6 +111,15 @@ await fastify.register(analyticsRoutes, { prefix: '/api/analytics' });
 await fastify.register(aiRoutes, { prefix: '/api/ai' });
 await fastify.register(notificationRoutes, { prefix: '/api/notifications' });
 await fastify.register(settingsRoutes, { prefix: '/api/settings' });
+// New feature routes
+await fastify.register(chatRoutes, { prefix: '/api/chat' });
+await fastify.register(noteRoutes, { prefix: '/api' });
+await fastify.register(milestoneRoutes, { prefix: '/api' });
+await fastify.register(timeRoutes, { prefix: '/api' });
+await fastify.register(attachmentRoutes, { prefix: '/api' });
+await fastify.register(activityRoutes, { prefix: '/api' });
+await fastify.register(commentRoutes, { prefix: '/api' });
+await fastify.register(calendarRoutes, { prefix: '/api' });
 
 // Serve static frontend in production
 if (!env.isDev) {
@@ -128,9 +153,31 @@ const io = new SocketIO(fastify.server, {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
+  // Join user's personal room for notifications
   socket.on('join', (userId) => {
     socket.join(`user:${userId}`);
+    socket.userId = userId;
     console.log(`User ${userId} joined their room`);
+  });
+
+  // Join project room for real-time chat
+  socket.on('join-project', (projectId) => {
+    socket.join(`project:${projectId}`);
+    console.log(`Socket ${socket.id} joined project:${projectId}`);
+  });
+
+  // Leave project room
+  socket.on('leave-project', (projectId) => {
+    socket.leave(`project:${projectId}`);
+    console.log(`Socket ${socket.id} left project:${projectId}`);
+  });
+
+  // Typing indicator for project chat
+  socket.on('typing', ({ projectId, isTyping }) => {
+    socket.to(`project:${projectId}`).emit('user-typing', {
+      userId: socket.userId,
+      isTyping
+    });
   });
 
   socket.on('disconnect', () => {

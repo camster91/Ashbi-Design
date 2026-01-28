@@ -204,6 +204,141 @@ export const api = {
     request(`/settings/templates/${id}`, { method: 'DELETE' }),
   renderTemplate: (id, variables) =>
     request(`/settings/templates/${id}/render`, { method: 'POST', body: { variables } }),
+
+  // ==================== NEW FEATURES ====================
+
+  // Project Chat
+  getChatMessages: (projectId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/chat/projects/${projectId}/messages${query ? `?${query}` : ''}`);
+  },
+  sendChatMessage: (projectId, data) =>
+    request(`/chat/projects/${projectId}/messages`, { method: 'POST', body: data }),
+  editChatMessage: (projectId, messageId, content) =>
+    request(`/chat/projects/${projectId}/messages/${messageId}`, { method: 'PUT', body: { content } }),
+  deleteChatMessage: (projectId, messageId) =>
+    request(`/chat/projects/${projectId}/messages/${messageId}`, { method: 'DELETE' }),
+  addChatReaction: (projectId, messageId, emoji) =>
+    request(`/chat/projects/${projectId}/messages/${messageId}/reactions`, { method: 'POST', body: { emoji } }),
+  removeChatReaction: (projectId, messageId, emoji) =>
+    request(`/chat/projects/${projectId}/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`, { method: 'DELETE' }),
+
+  // Notes
+  getNotes: (projectId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/projects/${projectId}/notes${query ? `?${query}` : ''}`);
+  },
+  getNote: (id) =>
+    request(`/notes/${id}`),
+  createNote: (projectId, data) =>
+    request(`/projects/${projectId}/notes`, { method: 'POST', body: data }),
+  updateNote: (id, data) =>
+    request(`/notes/${id}`, { method: 'PUT', body: data }),
+  deleteNote: (id) =>
+    request(`/notes/${id}`, { method: 'DELETE' }),
+  pinNote: (id) =>
+    request(`/notes/${id}/pin`, { method: 'POST' }),
+
+  // Milestones
+  getMilestones: (projectId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/projects/${projectId}/milestones${query ? `?${query}` : ''}`);
+  },
+  getMilestone: (id) =>
+    request(`/milestones/${id}`),
+  createMilestone: (projectId, data) =>
+    request(`/projects/${projectId}/milestones`, { method: 'POST', body: data }),
+  updateMilestone: (id, data) =>
+    request(`/milestones/${id}`, { method: 'PUT', body: data }),
+  deleteMilestone: (id) =>
+    request(`/milestones/${id}`, { method: 'DELETE' }),
+  addTaskToMilestone: (milestoneId, taskId) =>
+    request(`/milestones/${milestoneId}/tasks/${taskId}`, { method: 'POST' }),
+  removeTaskFromMilestone: (milestoneId, taskId) =>
+    request(`/milestones/${milestoneId}/tasks/${taskId}`, { method: 'DELETE' }),
+
+  // Time Tracking
+  getTimeEntries: (projectId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/projects/${projectId}/time-entries${query ? `?${query}` : ''}`);
+  },
+  getMyTimeEntries: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/time-entries/my${query ? `?${query}` : ''}`);
+  },
+  createTimeEntry: (data) =>
+    request('/time-entries', { method: 'POST', body: data }),
+  updateTimeEntry: (id, data) =>
+    request(`/time-entries/${id}`, { method: 'PUT', body: data }),
+  deleteTimeEntry: (id) =>
+    request(`/time-entries/${id}`, { method: 'DELETE' }),
+  getTimeSummary: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/time-entries/summary${query ? `?${query}` : ''}`);
+  },
+
+  // Activity Feed
+  getProjectActivity: (projectId, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/projects/${projectId}/activity${query ? `?${query}` : ''}`);
+  },
+  getActivity: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/activity${query ? `?${query}` : ''}`);
+  },
+  getMyActivity: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/activity/my${query ? `?${query}` : ''}`);
+  },
+  getActivitySummary: (days = 7) =>
+    request(`/activity/summary?days=${days}`),
+
+  // Task Comments
+  getTaskComments: (taskId) =>
+    request(`/tasks/${taskId}/comments`),
+  addTaskComment: (taskId, content) =>
+    request(`/tasks/${taskId}/comments`, { method: 'POST', body: { content } }),
+  updateComment: (id, content) =>
+    request(`/comments/${id}`, { method: 'PUT', body: { content } }),
+  deleteComment: (id) =>
+    request(`/comments/${id}`, { method: 'DELETE' }),
+  getMentionableUsers: (query = '') =>
+    request(`/users/mentionable${query ? `?query=${query}` : ''}`),
+
+  // Calendar
+  getCalendarEvents: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/calendar${query ? `?${query}` : ''}`);
+  },
+  getMyCalendarEvents: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/calendar/my${query ? `?${query}` : ''}`);
+  },
+  getCalendarEvent: (id) =>
+    request(`/calendar/${id}`),
+  createCalendarEvent: (data) =>
+    request('/calendar', { method: 'POST', body: data }),
+  updateCalendarEvent: (id, data) =>
+    request(`/calendar/${id}`, { method: 'PUT', body: data }),
+  deleteCalendarEvent: (id) =>
+    request(`/calendar/${id}`, { method: 'DELETE' }),
+  rsvpCalendarEvent: (id, status) =>
+    request(`/calendar/${id}/rsvp`, { method: 'POST', body: { status } }),
+  getUpcomingEvents: (limit = 5) =>
+    request(`/calendar/upcoming?limit=${limit}`),
+
+  // Attachments
+  getAttachments: (entityType, entityId) =>
+    request(`/attachments?entityType=${entityType}&entityId=${entityId}`),
+  deleteAttachment: (id) =>
+    request(`/attachments/${id}`, { method: 'DELETE' }),
+  // Note: File upload uses FormData, handled separately in components
+
+  // Kanban (using existing tasks endpoints)
+  updateTaskPosition: (id, data) =>
+    request(`/tasks/${id}`, { method: 'PUT', body: data }),
+  bulkUpdateTasks: (updates) =>
+    request('/tasks/bulk-update', { method: 'POST', body: { updates } }),
 };
 
 export default api;
