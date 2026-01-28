@@ -24,12 +24,21 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  assignedThreads  Thread[]        @relation("AssignedTo")
-  assignedTasks    Task[]          @relation("TaskAssignee")
-  draftedResponses Response[]      @relation("DraftedBy")
-  approvedResponses Response[]     @relation("ApprovedBy")
-  notifications    Notification[]
-  internalNotes    InternalNote[]
+  assignedThreads   Thread[]         @relation("AssignedTo")
+  assignedTasks     Task[]           @relation("TaskAssignee")
+  draftedResponses  Response[]       @relation("DraftedBy")
+  approvedResponses Response[]       @relation("ApprovedBy")
+  notifications     Notification[]
+  internalNotes     InternalNote[]
+  chatMessages      ChatMessage[]    @relation("ChatAuthor")
+  chatReactions     ChatReaction[]
+  notes             Note[]           @relation("NoteAuthor")
+  timeEntries       TimeEntry[]
+  attachments       Attachment[]
+  activities        Activity[]
+  taskComments      TaskComment[]    @relation("CommentAuthor")
+  createdEvents     CalendarEvent[]  @relation("EventCreator")
+  eventAttendees    EventAttendee[]
 
   @@map("users")
 }
@@ -91,9 +100,15 @@ model Project {
   updatedAt      DateTime @updatedAt
 
   // Relations
-  client  Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  threads Thread[]
-  tasks   Task[]
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  threads        Thread[]
+  tasks          Task[]
+  chatMessages   ChatMessage[]
+  notes          Note[]
+  milestones     Milestone[]
+  timeEntries    TimeEntry[]
+  activities     Activity[]
+  calendarEvents CalendarEvent[]
 
   @@map("projects")
 }
@@ -111,14 +126,19 @@ model Task {
   sourceThreadId String?
   blockedBy      String?
   aiGenerated    Boolean   @default(false)
+  position       Int       @default(0) // For Kanban board ordering
   projectId      String
   assigneeId     String?
+  milestoneId    String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   // Relations
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee    User?         @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  milestone   Milestone?    @relation("MilestoneTasks", fields: [milestoneId], references: [id])
+  comments    TaskComment[]
+  timeEntries TimeEntry[]
 
   @@map("tasks")
 }
@@ -287,4 +307,210 @@ model UnmatchedEmail {
   createdAt        DateTime @default(now())
 
   @@map("unmatched_emails")
+}
+
+// ==================== PROJECT CHAT ====================
+
+model ChatMessage {
+  id        String    @id @default(cuid())
+  content   String
+  type      String    @default("TEXT") // TEXT, FILE, SYSTEM
+  metadata  String?   // JSON: file info, mentions, etc.
+  isEdited  Boolean   @default(false)
+  editedAt  DateTime?
+  parentId  String?   // For thread replies
+  projectId String
+  authorId  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relations
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author    User           @relation("ChatAuthor", fields: [authorId], references: [id])
+  parent    ChatMessage?   @relation("ChatReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   ChatMessage[]  @relation("ChatReplies")
+  reactions ChatReaction[]
+
+  @@map("chat_messages")
+}
+
+model ChatReaction {
+  id        String   @id @default(cuid())
+  emoji     String
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId, emoji])
+  @@map("chat_reactions")
+}
+
+// ==================== NOTES & DOCUMENTS ====================
+
+model Note {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    // Rich text / Markdown content
+  type        String    @default("NOTE") // NOTE, MEETING_NOTES, WIKI, DOC
+  isPinned    Boolean   @default(false)
+  tags        String    @default("[]") // JSON array of tags
+  projectId   String
+  authorId    String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author  User    @relation("NoteAuthor", fields: [authorId], references: [id])
+
+  @@map("notes")
+}
+
+// ==================== MILESTONES ====================
+
+model Milestone {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  dueDate     DateTime
+  status      String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE
+  completedAt DateTime?
+  color       String    @default("#3B82F6") // For visual distinction
+  projectId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks   Task[]  @relation("MilestoneTasks")
+
+  @@map("milestones")
+}
+
+// ==================== TIME TRACKING ====================
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  description String?
+  duration    Int       // Duration in minutes
+  date        DateTime  @default(now())
+  billable    Boolean   @default(true)
+  taskId      String?
+  projectId   String
+  userId      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  task    Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("time_entries")
+}
+
+// ==================== FILE ATTACHMENTS ====================
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int      // Size in bytes
+  path         String   // Storage path or URL
+  thumbnailPath String? // For images
+  entityType   String   // PROJECT, TASK, CHAT, NOTE
+  entityId     String
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  // Relations
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@map("attachments")
+}
+
+// ==================== ACTIVITY FEED ====================
+
+model Activity {
+  id         String   @id @default(cuid())
+  type       String   // TASK_CREATED, TASK_COMPLETED, CHAT_MESSAGE, NOTE_CREATED, etc.
+  action     String   // created, updated, deleted, completed, commented
+  entityType String   // TASK, PROJECT, THREAD, NOTE, MILESTONE, etc.
+  entityId   String
+  entityName String?  // Display name of the entity
+  metadata   String?  // JSON: additional context
+  projectId  String?
+  userId     String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id])
+
+  @@index([projectId, createdAt])
+  @@map("activities")
+}
+
+// ==================== TASK COMMENTS ====================
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  content   String
+  mentions  String   @default("[]") // JSON: array of mentioned user IDs
+  taskId    String
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation("CommentAuthor", fields: [authorId], references: [id])
+
+  @@map("task_comments")
+}
+
+// ==================== CALENDAR & MEETINGS ====================
+
+model CalendarEvent {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime
+  type        String    @default("MEETING") // MEETING, DEADLINE, REMINDER, MILESTONE
+  location    String?   // Physical location or video call link
+  isAllDay    Boolean   @default(false)
+  color       String    @default("#3B82F6")
+  recurrence  String?   // JSON: recurrence rules
+  projectId   String?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy   User              @relation("EventCreator", fields: [createdById], references: [id])
+  attendees   EventAttendee[]
+
+  @@map("calendar_events")
+}
+
+model EventAttendee {
+  id        String   @id @default(cuid())
+  status    String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, TENTATIVE
+  eventId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_attendees")
 }
