@@ -1,6 +1,7 @@
 // API client for Agency Hub
 
-const API_BASE = '/api';
+// Use VITE_API_URL for production (external backend), fallback to /api for dev (proxied)
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 class ApiError extends Error {
   constructor(message, status, data) {
