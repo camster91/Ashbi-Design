@@ -6,6 +6,9 @@ const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isDev: process.env.NODE_ENV !== 'production',
 
+  // CORS
+  corsOrigin: process.env.CORS_ORIGIN || 'https://ashbi-design.vercel.app',
+
   // Auth
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',
   jwtExpiresIn: '7d',
