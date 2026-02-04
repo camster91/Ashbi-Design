@@ -6,8 +6,11 @@ const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   isDev: process.env.NODE_ENV !== 'production',
 
-  // CORS
-  corsOrigin: process.env.CORS_ORIGIN || 'https://ashbi-design.vercel.app',
+  // CORS - supports multiple origins separated by commas
+  corsOrigins: (process.env.CORS_ORIGIN || 'https://ashbi-design.vercel.app,https://powderblue-leopard-537122.hostingersite.com')
+    .split(',')
+    .map(origin => origin.trim())
+    .filter(Boolean),
 
   // Auth
   jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production',

@@ -52,7 +52,7 @@ const fastify = Fastify({
 
 // Register plugins
 await fastify.register(cors, {
-  origin: env.isDev ? true : [env.corsOrigin],
+  origin: env.isDev ? true : env.corsOrigins,
   credentials: true
 });
 
@@ -145,7 +145,7 @@ fastify.get('/api/health', async () => {
 // Setup Socket.IO for real-time notifications
 const io = new SocketIO(fastify.server, {
   cors: {
-    origin: env.isDev ? '*' : [env.corsOrigin],
+    origin: env.isDev ? '*' : env.corsOrigins,
     credentials: true
   }
 });
