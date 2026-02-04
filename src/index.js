@@ -124,7 +124,7 @@ await fastify.register(calendarRoutes, { prefix: '/api' });
 // Serve static frontend in production
 if (!env.isDev) {
   await fastify.register(fastifyStatic, {
-    root: path.join(__dirname, '../web/dist'),
+    root: path.join(__dirname, '../dist'),
     prefix: '/'
   });
 
