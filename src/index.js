@@ -52,7 +52,7 @@ const fastify = Fastify({
 
 // Register plugins
 await fastify.register(cors, {
-  origin: env.isDev ? true : [env.corsOrigin],
+  origin: env.isDev ? true : env.corsOrigins,
   credentials: true
 });
 
@@ -124,7 +124,7 @@ await fastify.register(calendarRoutes, { prefix: '/api' });
 // Serve static frontend in production
 if (!env.isDev) {
   await fastify.register(fastifyStatic, {
-    root: path.join(__dirname, '../web/dist'),
+    root: path.join(__dirname, '../dist'),
     prefix: '/'
   });
 
@@ -145,7 +145,7 @@ fastify.get('/api/health', async () => {
 // Setup Socket.IO for real-time notifications
 const io = new SocketIO(fastify.server, {
   cors: {
-    origin: env.isDev ? '*' : [env.corsOrigin],
+    origin: env.isDev ? '*' : env.corsOrigins,
     credentials: true
   }
 });
