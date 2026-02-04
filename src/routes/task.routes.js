@@ -221,4 +221,252 @@ export default async function taskRoutes(fastify) {
 
     return { success: true, updated: results.length };
   });
+
+  // ===== NOTION-LIKE TASK PAGE FEATURES =====
+
+  // Get task with full page content (Notion-style)
+  fastify.get('/:id/page', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { id } = request.params;
+
+    const task = await prisma.task.findUnique({
+      where: { id },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            client: { select: { id: true, name: true } }
+          }
+        },
+        assignee: { select: { id: true, name: true, email: true } },
+        subpages: {
+          select: {
+            id: true,
+            title: true,
+            icon: true,
+            status: true,
+            isPage: true,
+            createdAt: true,
+            assignee: { select: { id: true, name: true } }
+          },
+          orderBy: { createdAt: 'asc' }
+        },
+        parent: {
+          select: {
+            id: true,
+            title: true,
+            icon: true
+          }
+        },
+        comments: {
+          include: {
+            author: { select: { id: true, name: true } }
+          },
+          orderBy: { createdAt: 'asc' }
+        }
+      }
+    });
+
+    if (!task) {
+      return reply.status(404).send({ error: 'Task not found' });
+    }
+
+    // Parse content if it's stored as JSON string
+    let parsedContent = [];
+    try {
+      parsedContent = JSON.parse(task.content || '[]');
+    } catch (e) {
+      parsedContent = [{ type: 'paragraph', content: task.content || '' }];
+    }
+
+    // Parse properties
+    let parsedProperties = {};
+    try {
+      parsedProperties = JSON.parse(task.properties || '{}');
+    } catch (e) {
+      parsedProperties = {};
+    }
+
+    return {
+      ...task,
+      content: parsedContent,
+      properties: parsedProperties
+    };
+  });
+
+  // Update task content (Notion-style blocks)
+  fastify.put('/:id/content', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const { content, title, icon, coverImage, properties } = request.body;
+
+    const updateData = {};
+    if (content !== undefined) updateData.content = JSON.stringify(content);
+    if (title !== undefined) updateData.title = title;
+    if (icon !== undefined) updateData.icon = icon;
+    if (coverImage !== undefined) updateData.coverImage = coverImage;
+    if (properties !== undefined) updateData.properties = JSON.stringify(properties);
+
+    const task = await prisma.task.update({
+      where: { id },
+      data: updateData,
+      include: {
+        project: { select: { id: true, name: true } },
+        assignee: { select: { id: true, name: true } }
+      }
+    });
+
+    return task;
+  });
+
+  // Create subpage (Notion-style)
+  fastify.post('/:id/subpage', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { id } = request.params;
+    const { title, icon, content } = request.body;
+
+    const parentTask = await prisma.task.findUnique({
+      where: { id },
+      select: { projectId: true }
+    });
+
+    if (!parentTask) {
+      return reply.status(404).send({ error: 'Parent task not found' });
+    }
+
+    const subpage = await prisma.task.create({
+      data: {
+        title: title || 'Untitled',
+        icon: icon || '📄',
+        content: JSON.stringify(content || [{ type: 'paragraph', content: '' }]),
+        isPage: true,
+        parentId: id,
+        projectId: parentTask.projectId,
+        assigneeId: request.user.id,
+        status: 'PENDING'
+      },
+      include: {
+        assignee: { select: { id: true, name: true } }
+      }
+    });
+
+    return subpage;
+  });
+
+  // Get task breadcrumbs
+  fastify.get('/:id/breadcrumbs', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { id } = request.params;
+
+    const breadcrumbs = [];
+    let currentId = id;
+
+    while (currentId) {
+      const task = await prisma.task.findUnique({
+        where: { id: currentId },
+        select: { id: true, title: true, icon: true, parentId: true, projectId: true }
+      });
+
+      if (!task) break;
+
+      breadcrumbs.unshift({
+        id: task.id,
+        title: task.title,
+        icon: task.icon,
+        projectId: task.projectId
+      });
+
+      currentId = task.parentId;
+    }
+
+    // Add project at root if all tasks are from same project
+    if (breadcrumbs.length > 0 && breadcrumbs[0].projectId) {
+      const project = await prisma.project.findUnique({
+        where: { id: breadcrumbs[0].projectId },
+        select: { id: true, name: true }
+      });
+      if (project) {
+        breadcrumbs.unshift({
+          id: project.id,
+          title: project.name,
+          icon: '📁',
+          isProject: true
+        });
+      }
+    }
+
+    return breadcrumbs;
+  });
+
+  // Search for mentions (@users, @tasks, @projects)
+  fastify.get('/mentions/search', {
+    onRequest: [fastify.authenticate]
+  }, async (request, reply) => {
+    const { q, projectId } = request.query;
+
+    if (!q || q.length < 2) {
+      return { users: [], tasks: [] };
+    }
+
+    const searchQuery = q.toLowerCase();
+
+    // Search users
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { name: { contains: searchQuery, mode: 'insensitive' } },
+          { email: { contains: searchQuery, mode: 'insensitive' } }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true
+      },
+      take: 5
+    });
+
+    // Search tasks in project
+    const tasksWhere = {
+      title: { contains: searchQuery, mode: 'insensitive' }
+    };
+    if (projectId) {
+      tasksWhere.projectId = projectId;
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: tasksWhere,
+      select: {
+        id: true,
+        title: true,
+        icon: true,
+        isPage: true,
+        project: { select: { name: true } }
+      },
+      take: 5
+    });
+
+    return {
+      users: users.map(u => ({
+        id: u.id,
+        type: 'user',
+        name: u.name,
+        email: u.email,
+        avatar: u.name.charAt(0).toUpperCase()
+      })),
+      tasks: tasks.map(t => ({
+        id: t.id,
+        type: 'task',
+        title: t.title,
+        icon: t.icon || (t.isPage ? '📄' : '✓'),
+        projectName: t.project?.name
+      }))
+    };
+  });
 }

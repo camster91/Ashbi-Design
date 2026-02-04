@@ -12,6 +12,7 @@ import Team from './pages/Team';
 import Analytics from './pages/Analytics';
 import Search from './pages/Search';
 import PendingApprovals from './pages/PendingApprovals';
+import TaskPage from './pages/TaskPage';
 
 function PrivateRoute({ children }) {
   const { user, isLoading } = useAuth();
@@ -42,6 +43,7 @@ function AppRoutes() {
                 <Route path="/thread/:id" element={<Thread />} />
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/project/:id" element={<Project />} />
+                <Route path="/task/:id" element={<TaskPage />} />
                 <Route path="/clients" element={<Clients />} />
                 <Route path="/client/:id" element={<Client />} />
                 <Route path="/team" element={<Team />} />

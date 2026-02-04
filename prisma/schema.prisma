@@ -116,10 +116,21 @@ model Project {
 model Task {
   id             String    @id @default(cuid())
   title          String
-  description    String?
+  description    String?   // Brief description/summary
+  content        String?   @default("[]") // JSON: Block-based rich content (Notion-like)
   status         String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, BLOCKED
   priority       String    @default("NORMAL") // CRITICAL, HIGH, NORMAL, LOW
   category       String    @default("UPCOMING") // IMMEDIATE, THIS_WEEK, UPCOMING, WAITING_CLIENT, WAITING_US
+  
+  // Notion-like page properties
+  isPage         Boolean   @default(false) // Treat as a page with subpages
+  icon           String?   // Emoji or icon URL
+  coverImage     String?   // Cover image URL
+  properties     String    @default("{}") // JSON: Custom properties/fields
+  
+  // Hierarchy
+  parentId       String?   // For subpages/subtasks
+  
   estimatedTime  String?
   dueDate        DateTime?
   completedAt    DateTime?
@@ -139,7 +150,13 @@ model Task {
   milestone   Milestone?    @relation("MilestoneTasks", fields: [milestoneId], references: [id])
   comments    TaskComment[]
   timeEntries TimeEntry[]
+  
+  // Self-relation for subpages/subtasks
+  parent      Task?         @relation("TaskSubpages", fields: [parentId], references: [id], onDelete: Cascade)
+  subpages    Task[]        @relation("TaskSubpages")
 
+  @@index([parentId])
+  @@index([projectId, parentId])
   @@map("tasks")
 }
 

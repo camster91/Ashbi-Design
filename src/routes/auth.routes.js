@@ -51,7 +51,7 @@ export default async function authRoutes(fastify) {
       .setCookie('token', token, {
         path: '/',
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: process.env.NODE_ENV === 'production' && !request.headers.host?.includes('localhost'),
         sameSite: 'lax',
         maxAge: 7 * 24 * 60 * 60 // 7 days
       })
@@ -69,7 +69,7 @@ export default async function authRoutes(fastify) {
   // Logout
   fastify.post('/logout', async (request, reply) => {
     reply
-      .clearCookie('token', { path: '/' })
+      .clearCookie('token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production' && !request.headers.host?.includes('localhost'), sameSite: 'lax' })
       .send({ success: true });
   });
 

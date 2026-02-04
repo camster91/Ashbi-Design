@@ -340,6 +340,20 @@ export const api = {
     request(`/tasks/${id}`, { method: 'PUT', body: data }),
   bulkUpdateTasks: (updates) =>
     request('/tasks/bulk-update', { method: 'POST', body: { updates } }),
+
+  // ===== NOTION-LIKE TASK PAGES =====
+  getTaskPage: (id) =>
+    request(`/tasks/${id}/page`),
+  updateTaskContent: (id, data) =>
+    request(`/tasks/${id}/content`, { method: 'PUT', body: data }),
+  createSubpage: (id, data) =>
+    request(`/tasks/${id}/subpage`, { method: 'POST', body: data }),
+  getTaskBreadcrumbs: (id) =>
+    request(`/tasks/${id}/breadcrumbs`),
+  searchMentions: (query, projectId) =>
+    request(`/tasks/mentions/search?q=${encodeURIComponent(query)}${projectId ? `&projectId=${projectId}` : ''}`),
+  addTaskComment: (taskId, content) =>
+    request(`/tasks/${taskId}/comments`, { method: 'POST', body: { content } }),
 };
 
 export default api;
