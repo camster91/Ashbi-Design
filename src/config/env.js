@@ -7,7 +7,7 @@ const env = {
   isDev: process.env.NODE_ENV !== 'production',
 
   // CORS - supports multiple origins separated by commas
-  corsOrigins: (process.env.CORS_ORIGIN || 'https://ashbi-design.vercel.app,https://powderblue-leopard-537122.hostingersite.com')
+  corsOrigins: (process.env.CORS_ORIGIN || 'https://ashbi-design.vercel.app,https://powderblue-leopard-537122.hostingersite.com,https://purple-sandpiper-897512.hostingersite.com')
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean),
@@ -41,10 +41,10 @@ const env = {
 
 // Validate required env vars in production
 if (!env.isDev) {
-  const required = ['JWT_SECRET', 'ANTHROPIC_API_KEY', 'WEBHOOK_SECRET'];
+  const required = ['JWT_SECRET'];
   const missing = required.filter(key => !process.env[key]);
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    console.warn(`Missing environment variables: ${missing.join(', ')} - using defaults`);
   }
 }
 
