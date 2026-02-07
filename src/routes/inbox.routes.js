@@ -1,6 +1,7 @@
 // Inbox routes
 
 import { prisma } from '../index.js';
+import { safeParse } from '../utils/safeParse.js';
 
 export default async function inboxRoutes(fastify) {
   // Get inbox (all threads with filters)
@@ -17,8 +18,8 @@ export default async function inboxRoutes(fastify) {
       limit: limitParam = '20'
     } = request.query;
 
-    const page = parseInt(pageParam);
-    const limit = parseInt(limitParam);
+    const page = Math.max(1, parseInt(pageParam) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(limitParam) || 20));
 
     const where = {};
 
@@ -91,8 +92,8 @@ export default async function inboxRoutes(fastify) {
 
     return unmatched.map(email => ({
       ...email,
-      suggestedClients: JSON.parse(email.suggestedClients || '[]'),
-      suggestedProjects: JSON.parse(email.suggestedProjects || '[]')
+      suggestedClients: safeParse(email.suggestedClients, []),
+      suggestedProjects: safeParse(email.suggestedProjects, [])
     }));
   });
 

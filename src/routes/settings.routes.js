@@ -1,6 +1,7 @@
 // Settings routes (assignment rules, templates, configuration)
 
 import { prisma } from '../index.js';
+import { safeParse } from '../utils/safeParse.js';
 
 export default async function settingsRoutes(fastify) {
   // ==================== ASSIGNMENT RULES ====================
@@ -18,7 +19,7 @@ export default async function settingsRoutes(fastify) {
 
     return rules.map(r => ({
       ...r,
-      conditions: JSON.parse(r.conditions)
+      conditions: safeParse(r.conditions, [])
     }));
   });
 
@@ -41,7 +42,7 @@ export default async function settingsRoutes(fastify) {
 
     return reply.status(201).send({
       ...rule,
-      conditions: JSON.parse(rule.conditions)
+      conditions: safeParse(rule.conditions, [])
     });
   });
 
@@ -67,7 +68,7 @@ export default async function settingsRoutes(fastify) {
 
     return {
       ...rule,
-      conditions: JSON.parse(rule.conditions)
+      conditions: safeParse(rule.conditions, [])
     };
   });
 
@@ -106,7 +107,7 @@ export default async function settingsRoutes(fastify) {
 
     return templates.map(t => ({
       ...t,
-      variables: JSON.parse(t.variables)
+      variables: safeParse(t.variables, [])
     }));
   });
 
@@ -126,7 +127,7 @@ export default async function settingsRoutes(fastify) {
 
     return {
       ...template,
-      variables: JSON.parse(template.variables)
+      variables: safeParse(template.variables, [])
     };
   });
 
@@ -149,7 +150,7 @@ export default async function settingsRoutes(fastify) {
 
     return reply.status(201).send({
       ...template,
-      variables: JSON.parse(template.variables)
+      variables: safeParse(template.variables, [])
     });
   });
 
@@ -175,7 +176,7 @@ export default async function settingsRoutes(fastify) {
 
     return {
       ...template,
-      variables: JSON.parse(template.variables)
+      variables: safeParse(template.variables, [])
     };
   });
 

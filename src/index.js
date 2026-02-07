@@ -151,25 +151,29 @@ const io = new SocketIO(fastify.server, {
 });
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  fastify.log.info(`Client connected: ${socket.id}`);
+
+  socket.on('error', (err) => {
+    fastify.log.error({ err, socketId: socket.id }, 'Socket error');
+  });
 
   // Join user's personal room for notifications
   socket.on('join', (userId) => {
     socket.join(`user:${userId}`);
     socket.userId = userId;
-    console.log(`User ${userId} joined their room`);
+    fastify.log.info(`User ${userId} joined their room`);
   });
 
   // Join project room for real-time chat
   socket.on('join-project', (projectId) => {
     socket.join(`project:${projectId}`);
-    console.log(`Socket ${socket.id} joined project:${projectId}`);
+    fastify.log.info(`Socket ${socket.id} joined project:${projectId}`);
   });
 
   // Leave project room
   socket.on('leave-project', (projectId) => {
     socket.leave(`project:${projectId}`);
-    console.log(`Socket ${socket.id} left project:${projectId}`);
+    fastify.log.info(`Socket ${socket.id} left project:${projectId}`);
   });
 
   // Typing indicator for project chat
@@ -180,9 +184,13 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    fastify.log.info(`Client disconnected: ${socket.id} (${reason})`);
   });
+});
+
+io.engine.on('connection_error', (err) => {
+  fastify.log.error({ err }, 'Socket.IO connection error');
 });
 
 // Make io available globally
