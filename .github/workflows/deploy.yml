@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Run linter
-        run: npm run lint || true
+        run: npm run lint
 
       - name: Generate Prisma client
         run: npx prisma generate

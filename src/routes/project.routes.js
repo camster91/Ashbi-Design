@@ -2,6 +2,7 @@
 
 import { prisma } from '../index.js';
 import { refreshProjectPlan } from '../services/project.service.js';
+import { safeParse } from '../utils/safeParse.js';
 
 export default async function projectRoutes(fastify) {
   // List all projects
@@ -89,8 +90,8 @@ export default async function projectRoutes(fastify) {
     // Parse JSON fields
     return {
       ...project,
-      aiPlan: project.aiPlan ? JSON.parse(project.aiPlan) : null,
-      risks: JSON.parse(project.risks)
+      aiPlan: safeParse(project.aiPlan),
+      risks: safeParse(project.risks, [])
     };
   });
 
@@ -141,8 +142,8 @@ export default async function projectRoutes(fastify) {
 
     return {
       ...project,
-      aiPlan: project.aiPlan ? JSON.parse(project.aiPlan) : null,
-      risks: JSON.parse(project.risks)
+      aiPlan: safeParse(project.aiPlan),
+      risks: safeParse(project.risks, [])
     };
   });
 
@@ -158,8 +159,8 @@ export default async function projectRoutes(fastify) {
         success: true,
         project: {
           ...updatedProject,
-          aiPlan: updatedProject.aiPlan ? JSON.parse(updatedProject.aiPlan) : null,
-          risks: JSON.parse(updatedProject.risks)
+          aiPlan: safeParse(updatedProject.aiPlan),
+          risks: safeParse(updatedProject.risks, [])
         }
       };
     } catch (error) {

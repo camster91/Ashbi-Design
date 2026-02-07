@@ -1,6 +1,7 @@
 // Client routes
 
 import { prisma } from '../index.js';
+import { safeParse } from '../utils/safeParse.js';
 
 export default async function clientRoutes(fastify) {
   // List all clients
@@ -93,9 +94,9 @@ export default async function clientRoutes(fastify) {
     // Parse JSON fields
     return {
       ...client,
-      communicationPrefs: JSON.parse(client.communicationPrefs),
-      satisfactionSignals: JSON.parse(client.satisfactionSignals),
-      knowledgeBase: JSON.parse(client.knowledgeBase)
+      communicationPrefs: safeParse(client.communicationPrefs, {}),
+      satisfactionSignals: safeParse(client.satisfactionSignals, {}),
+      knowledgeBase: safeParse(client.knowledgeBase, {})
     };
   });
 
@@ -179,7 +180,12 @@ export default async function clientRoutes(fastify) {
       take: 20,
       include: {
         messages: {
-          orderBy: { receivedAt: 'desc' },
+          orderBy: { receivedAt: 'asc' },
+          take: 1,
+          where: { direction: 'INBOUND' }
+        },
+        responses: {
+          orderBy: { createdAt: 'asc' },
           take: 1
         }
       }
@@ -198,12 +204,45 @@ export default async function clientRoutes(fastify) {
       return acc;
     }, {});
 
+    // Calculate average response time (hours between first inbound message and first response)
+    const responseTimes = recentThreads
+      .filter(t => t.messages.length > 0 && t.responses.length > 0)
+      .map(t => {
+        const inboundTime = new Date(t.messages[0].receivedAt).getTime();
+        const responseTime = new Date(t.responses[0].createdAt).getTime();
+        return (responseTime - inboundTime) / (1000 * 60 * 60); // hours
+      })
+      .filter(h => h >= 0);
+
+    const avgResponseTime = responseTimes.length > 0
+      ? Math.round((responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) * 10) / 10
+      : null;
+
+    // Calculate satisfaction trend from sentiment over time
+    // Compare sentiment of older half vs newer half of threads
+    const threadsWithSentiment = recentThreads.filter(t => t.sentiment);
+    let satisfactionTrend = 'stable';
+    if (threadsWithSentiment.length >= 4) {
+      const sentimentScore = (s) => {
+        if (s === 'positive') return 1;
+        if (s === 'negative') return -1;
+        return 0;
+      };
+      const mid = Math.floor(threadsWithSentiment.length / 2);
+      // Threads are ordered newest-first, so newer = first half, older = second half
+      const newerAvg = threadsWithSentiment.slice(0, mid).reduce((a, t) => a + sentimentScore(t.sentiment), 0) / mid;
+      const olderAvg = threadsWithSentiment.slice(mid).reduce((a, t) => a + sentimentScore(t.sentiment), 0) / (threadsWithSentiment.length - mid);
+      const diff = newerAvg - olderAvg;
+      if (diff > 0.3) satisfactionTrend = 'improving';
+      else if (diff < -0.3) satisfactionTrend = 'declining';
+    }
+
     return {
       recentThreadCount: recentThreads.length,
       sentimentBreakdown: sentimentCounts,
       priorityBreakdown: priorityCounts,
-      avgResponseTime: null, // TODO: Calculate
-      satisfactionTrend: 'stable' // TODO: Calculate from sentiment
+      avgResponseTime,
+      satisfactionTrend
     };
   });
 }
